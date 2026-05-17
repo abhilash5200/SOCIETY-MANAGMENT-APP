@@ -1,0 +1,587 @@
+### ================= BASE URL =================
+
+@baseUrl = http://localhost:5000
+
+@guardToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YjQyMTdjOGMzZWE3ZGY0YzU0ZTc2MyIsInJvbGUiOiJHVUFSRCIsImlhdCI6MTc3OTAwNDIxOCwiZXhwIjoxNzc5NjA5MDE4fQ.socMZjlWPNhKqI-HM8_Isb1TQu7JPWpI3dYfvTieJKk
+
+@residentToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YjQyMTc0OGMzZWE3ZGY0YzU0ZTc2MCIsInJvbGUiOiJSRVNJREVOVCIsImlhdCI6MTc3MzQxODg4OCwiZXhwIjoxNzc0MDIzNjg4fQ.L8uI5JKdodl2YrUZW--0gnilk5g3P4rYFJMq-rYyJDI
+
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YjQyMTYwOGMzZWE3ZGY0YzU0ZTc1ZCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3ODQ4MTgxOCwiZXhwIjoxNzc5MDg2NjE4fQ.ExEpGaXqSkBkCa9aECLXZ35lkFjLe9X2_V-mMYdQatU
+
+
+
+### ================= REGISTER ADMIN =================
+
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "admin@test.com",
+  "phone": "9999999999",
+  "password": "123456",
+  "role": "ADMIN"
+}
+
+
+### ================= REGISTER RESIDENT =================
+
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Resident User",
+  "email": "resident@test.com",
+  "phone": "8888888888",
+  "password": "123456",
+  "role": "RESIDENT"
+}
+
+
+### ================= REGISTER GUARD =================
+
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Security Guard",
+  "email": "guard@test.com",
+  "phone": "7777777777",
+  "password": "123456",
+  "role": "GUARD"
+}
+
+
+### ================= LOGIN ADMIN =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123456"
+}
+
+
+### ================= LOGIN RESIDENT =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "resident@test.com",
+  "password": "123456"
+}
+
+
+### ================= LOGIN GUARD =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "guard@test.com",
+  "password": "123456"
+}
+
+
+### ================= LOGIN ADMIN (GET TOKEN) =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123456"
+}
+
+
+### ================= PASTE TOKEN HERE =================
+
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YjQyMTYwOGMzZWE3ZGY0YzU0ZTc1ZCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc3ODQ4MTgxOCwiZXhwIjoxNzc5MDg2NjE4fQ.ExEpGaXqSkBkCa9aECLXZ35lkFjLe9X2_V-mMYdQatU
+
+
+
+### ================= CREATE FLAT =================
+
+POST {{baseUrl}}/api/flats
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "block": "A",
+  "flatNumber": "101",
+  "floor": 1
+}
+
+
+### ================= CREATE ANOTHER FLAT =================
+
+POST {{baseUrl}}/api/flats
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "block": "A",
+  "flatNumber": "102",
+  "floor": 1
+}
+
+
+### ================= GET ALL FLATS =================
+
+GET {{baseUrl}}/api/flats
+Authorization: Bearer {{adminToken}}
+
+### ================= ASSIGN RESIDENT TO FLAT =================
+
+POST {{baseUrl}}/api/residents/assign
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "userId": "69b421748c3ea7df4c54e760",
+  "flatId": "69b422a6e408a2e2a6b8356d",
+  "isOwner": true
+}
+
+### ================= ADD VISITOR (GUARD) =================
+
+POST {{baseUrl}}/api/visitors
+Content-Type: application/json
+Authorization: Bearer {{guardToken}}
+
+{
+  "name": "John Visitor",
+  "phone": "9998887767",
+  "vehicleNumber": "AP01AB5678",
+  "purpose": "food Delivery",
+  "flatId": "69b422a6e408a2e2a6b8356d"
+}
+
+
+### ================= GET VISITORS (ROLE-BASED) =================
+
+GET {{baseUrl}}/api/visitors
+Authorization: Bearer {{adminToken}}
+
+
+### ================= CHECKOUT VISITOR (GUARD) =================
+
+PATCH {{baseUrl}}/api/visitors/69b439c647c5a8cb6010f50c/checkout
+Authorization: Bearer {{guardToken}}
+
+
+
+### ================= CREATE BILL (ADMIN) =================
+
+POST {{baseUrl}}/api/bills
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "flatId": "69b422a6e408a2e2a6b8356d",
+  "amount": 2508,
+  "dueDate": "2026-04-01"
+}
+
+
+### ================= GET BILLS (ADMIN) =================
+
+GET {{baseUrl}}/api/bills
+Authorization: Bearer {{adminToken}}
+
+
+### ================= GET BILLS (RESIDENT) =================
+
+GET {{baseUrl}}/api/bills
+Authorization: Bearer {{residentToken}}
+
+
+### ================= PAY BILL (RESIDENT) =================
+
+PATCH {{baseUrl}}/api/bills/69b43bd30e7e7a8812540d86/pay
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "paymentMethod": "UPI"
+}
+
+
+### ================= ADD VISITOR REQUEST (GUARD) =================
+
+POST {{baseUrl}}/api/visitors
+Content-Type: application/json
+Authorization: Bearer {{guardToken}}
+
+{
+  "name": "Delivery Boy",
+  "phone": "9876543210",
+  "vehicleNumber": "AP09XY1234",
+  "purpose": "Courier",
+  "flatId": "69b422a6e408a2e2a6b8356d"
+}
+
+
+### ================= RESIDENT APPROVES =================
+
+PATCH {{baseUrl}}/api/visitors/69b43d321c1c946785bd3cdf/approve
+Authorization: Bearer {{residentToken}}
+
+
+### ================= RESIDENT REJECTS =================
+
+PATCH {{baseUrl}}/api/visitors/69b43d321c1c946785bd3cdf/reject
+Authorization: Bearer {{residentToken}}
+
+
+### ================= GUARD ALLOWS ENTRY =================
+
+PATCH {{baseUrl}}/api/visitors/69b43d321c1c946785bd3cdf/entry
+Authorization: Bearer {{guardToken}}
+
+
+### ================= GUARD CHECKOUT =================
+
+PATCH {{baseUrl}}/api/visitors/69b43d321c1c946785bd3cdf/checkout
+Authorization: Bearer {{guardToken}}
+
+### ================= ADD DELIVERY (GUARD) =================
+
+POST {{baseUrl}}/api/deliveries
+Content-Type: application/json
+Authorization: Bearer {{guardToken}}
+
+{
+  "courierName": "Amazon",
+  "packageDetails": "Electronics Package",
+  "flatId": "69b422a6e408a2e2a6b8356d"
+}
+
+
+### ================= RESIDENT APPROVES =================
+
+PATCH {{baseUrl}}/api/deliveries/69b43e85e089dd995e73dfde/approve
+Authorization: Bearer {{residentToken}}
+
+
+### ================= RESIDENT REJECTS =================
+
+PATCH {{baseUrl}}/api/deliveries/69b43e85e089dd995e73dfde/reject
+Authorization: Bearer {{residentToken}}
+
+
+### ================= RESIDENT COLLECTS =================
+
+PATCH {{baseUrl}}/api/deliveries/69b43e85e089dd995e73dfde/collect
+Authorization: Bearer {{residentToken}}
+
+
+### ================= VIEW DELIVERIES =================
+
+GET {{baseUrl}}/api/deliveries
+Authorization: Bearer {{adminToken}}
+
+
+### ================= LOGIN STAFF =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@test.com",
+  "password": "123456"
+}
+
+@staffToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YjQ0MjkzZTc1ZWUyYjM2ZmFkYjYxNSIsInJvbGUiOiJTVEFGRiIsImlhdCI6MTc3MzQyMTQ4NiwiZXhwIjoxNzc0MDI2Mjg2fQ.Q52YnGer3-zL7kr4jvveE9jcQ7B_FMGu00ITxFBq-aI
+
+
+### ================= RAISE COMPLAINT (RESIDENT) =================
+
+POST {{baseUrl}}/api/complaints
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "title": "short circuit",
+  "description": "short circuit in kitchen pipe",
+  "priority": "HIGH"
+}
+
+
+### ================= ASSIGN COMPLAINT (ADMIN) =================
+
+PATCH {{baseUrl}}/api/complaints/69b443f2e75ee2b36fadb61b/assign
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "staffId": "69b44293e75ee2b36fadb615"
+}
+
+
+### ================= RESOLVE (STAFF) =================
+
+PATCH {{baseUrl}}/api/complaints/69b443f2e75ee2b36fadb61b/resolve
+Authorization: Bearer {{staffToken}}
+
+
+### ================= CLOSE (ADMIN) =================
+
+PATCH {{baseUrl}}/api/complaints/69b443f2e75ee2b36fadb61b/close
+Authorization: Bearer {{adminToken}}
+
+
+### ================= VIEW COMPLAINTS =================
+
+GET {{baseUrl}}/api/complaints
+Authorization: Bearer {{adminToken}}
+
+
+### ================= CREATE STAFF (ADMIN) =================
+
+POST {{baseUrl}}/api/staff
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Electrician",
+  "email": "staff@test.com",
+  "phone": "6666666666",
+  "password": "123456"
+}
+
+
+### ================= GET ALL STAFF =================
+
+GET {{baseUrl}}/api/staff
+Authorization: Bearer {{adminToken}}
+
+### ================= LOGIN STAFF =================
+
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@test.com",
+  "password": "123456"
+}
+
+
+### ================= CREATE NOTICE (ADMIN) =================
+
+POST {{baseUrl}}/api/notices
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Water Supply Shutdown",
+  "content": "Water supply will be off from 9 AM to 2 PM",
+  "type": "MAINTENANCE",
+  "isImportant": true
+}
+
+
+### ================= GET NOTICES =================
+
+GET {{baseUrl}}/api/notices
+Authorization: Bearer {{residentToken}}
+
+
+### ================= DELETE NOTICE =================
+
+DELETE {{baseUrl}}/api/notices/69b445ce8a2f287856f0560f
+Authorization: Bearer {{adminToken}}
+
+
+
+### ================= CREATE SLOT (ADMIN) =================
+
+POST {{baseUrl}}/api/parking/slots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "slotNumber": "A-01",
+  "type": "RESIDENT"
+}
+
+
+### ================= ASSIGN SLOT =================
+
+PATCH {{baseUrl}}/api/parking/slots/69b44e6d82cc1253aba725f1/assign
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "flatId": "69b422a6e408a2e2a6b8356d"
+}
+
+
+### ================= REGISTER VEHICLE (RESIDENT) =================
+
+POST {{baseUrl}}/api/parking/vehicles
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "number": "AP01AB1234",
+  "type": "CAR"
+}
+
+
+### ================= VIEW SLOTS =================
+
+GET {{baseUrl}}/api/parking/slots
+Authorization: Bearer {{adminToken}}
+
+
+### ================= RAISE EMERGENCY (RESIDENT) =================
+
+POST {{baseUrl}}/api/emergencies
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "type": "MEDICAL",
+  "description": "Person unconscious in flat"
+}
+
+
+### ================= GUARD RESPONDS =================
+
+PATCH {{baseUrl}}/api/emergencies/69b45319fda648a235d1bb74/respond
+Authorization: Bearer {{guardToken}}
+
+
+### ================= RESOLVE EMERGENCY =================
+
+PATCH {{baseUrl}}/api/emergencies/69b45319fda648a235d1bb74/resolve
+Authorization: Bearer {{adminToken}}
+
+
+### ================= VIEW ALERTS =================
+
+GET {{baseUrl}}/api/emergencies
+Authorization: Bearer {{adminToken}}
+
+
+
+### ================= CREATE FACILITY (ADMIN) =================
+
+POST {{baseUrl}}/api/facilities
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Clubhouse Hall",
+  "description": "Party hall for events",
+  "location": "Block A",
+  "capacity": 100
+}
+
+
+### ================= VIEW FACILITIES =================
+
+GET {{baseUrl}}/api/facilities
+Authorization: Bearer {{residentToken}}
+
+
+### ================= BOOK FACILITY =================
+
+POST {{baseUrl}}/api/facilities/book
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "facilityId": "69b455524c0a9830d90dc082",
+  "date": "2026-03-20",
+  "timeSlot": "6 PM - 9 PM"
+}
+
+
+### ================= CANCEL BOOKING =================
+
+PATCH {{baseUrl}}/api/facilities/cancel/69b455a84c0a9830d90dc08d
+Authorization: Bearer {{residentToken}}
+
+
+### ================= VIEW BOOKINGS =================
+
+GET {{baseUrl}}/api/facilities/bookings
+Authorization: Bearer {{adminToken}}
+
+
+### ================= CREATE POLL (ADMIN) =================
+
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "question": "Increase maintenance fee?",
+  "options": ["Yes", "No"],
+  "expiresAt": "2026-03-25"
+}
+
+
+### ================= VIEW POLLS =================
+
+GET {{baseUrl}}/api/polls
+Authorization: Bearer {{residentToken}}
+
+
+### ================= VOTE (RESIDENT) =================
+
+PATCH {{baseUrl}}/api/polls/69b4da15d42f2cb400984d3f/vote
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "optionIndex": 0
+}
+
+### ================= ADMIN DASHBOARD =================
+
+GET {{baseUrl}}/api/analytics/dashboard
+Authorization: Bearer {{adminToken}}
+
+### ================= UPDATE PROFILE =================
+
+PATCH {{baseUrl}}/api/profile
+Content-Type: application/json
+Authorization: Bearer {{residentToken}}
+
+{
+  "name": "Resident One Updated",
+  "phone": "8888888888",
+  "emergencyContact": "9999999999"
+}
+
+
+### ================= RESIDENT DIRECTORY =================
+
+GET {{baseUrl}}/api/profile/residents
+Authorization: Bearer {{residentToken}}
+
+### ================= GET NOTIFICATIONS =================
+
+GET {{baseUrl}}/api/notifications
+Authorization: Bearer {{residentToken}}
+
+
+### ================= MARK AS READ =================
+
+PATCH {{baseUrl}}/api/notifications/69b57e663e8e2ad934aca4da/read
+Authorization: Bearer {{residentToken}}
+
+### ================= CREATE TEST NOTIFICATION =================
+
+POST {{baseUrl}}/api/notifications/test
+Authorization: Bearer {{residentToken}}
+
+### ================= VIEW AUDIT LOGS =================
+
+GET {{baseUrl}}/api/audit
+Authorization: Bearer {{adminToken}}
