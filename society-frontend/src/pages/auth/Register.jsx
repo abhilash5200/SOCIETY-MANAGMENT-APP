@@ -1,48 +1,81 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+
+import {
+  useNavigate,
+  Link
+} from "react-router-dom";
+
 import api from "../../api/axios";
 
 export default function Register() {
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [form, setForm] = useState({
+  const [form, setForm] =
+    useState({
 
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    role: "RESIDENT"
+      name: "",
 
-  });
+      email: "",
 
-  const handleChange = (e) =>
+      phone: "",
 
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
+      password: ""
+
     });
 
-  const handleSubmit = async (e) => {
+  // ================= HANDLE CHANGE =================
+
+  const handleChange = e =>
+
+    setForm({
+
+      ...form,
+
+      [e.target.name]:
+        e.target.value
+
+    });
+
+  // ================= SUBMIT =================
+
+  const handleSubmit = async e => {
 
     e.preventDefault();
 
     try {
 
+      // ================= RESIDENT ONLY =================
+
       await api.post(
         "/auth/register",
-        form
+        {
+
+          ...form,
+
+          role: "RESIDENT"
+
+        }
       );
 
-      alert("Registration successful");
+      alert(
+        "Registration successful"
+      );
 
-      navigate("/login");
+      navigate(
+        "/login"
+      );
 
     } catch (err) {
 
       alert(
-        err.response?.data?.message ||
+
+        err.response?.data
+          ?.message ||
+
         "Registration failed"
+
       );
 
     }
@@ -52,7 +85,7 @@ export default function Register() {
 
     <div className="min-h-screen flex">
 
-      {/* LEFT IMAGE PANEL */}
+      {/* ================= LEFT PANEL ================= */}
 
       <div className="hidden lg:block w-1/2 bg-indigo-700 relative">
 
@@ -64,14 +97,16 @@ export default function Register() {
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-10">
 
-          <h1 className="text-4xl font-bold mb-4">
+          <h1 className="text-5xl font-bold mb-4">
+
             ABHI-SOCIETY
+
           </h1>
 
-          <p className="text-lg max-w-md opacity-90">
+          <p className="text-lg max-w-md opacity-90 leading-relaxed">
 
-            Join your community’s smart management platform
-            and simplify everyday living.
+            Smart residential society management platform
+            for modern communities.
 
           </p>
 
@@ -79,34 +114,41 @@ export default function Register() {
 
       </div>
 
-      {/* RIGHT FORM PANEL */}
+      {/* ================= RIGHT PANEL ================= */}
 
       <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 p-8">
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md"
+          className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md"
         >
 
-          <h2 className="text-3xl font-bold mb-2 text-center">
+          {/* HEADER */}
 
-            Create your account
+          <div className="text-center mb-8">
 
-          </h2>
+            <h2 className="text-4xl font-bold mb-2">
 
-          <p className="text-center text-gray-500 mb-8">
+              Create Account
 
-            Start managing your society today
+            </h2>
 
-          </p>
+            <p className="text-gray-500">
+
+              Register as a resident
+
+            </p>
+
+          </div>
 
           {/* NAME */}
 
           <input
             name="name"
-            placeholder="Full name"
+            placeholder="Full Name"
+            value={form.name}
             onChange={handleChange}
-            className="w-full p-3 mb-4 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full p-4 mb-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             required
           />
 
@@ -115,9 +157,10 @@ export default function Register() {
           <input
             name="email"
             type="email"
-            placeholder="Email address"
+            placeholder="Email Address"
+            value={form.email}
             onChange={handleChange}
-            className="w-full p-3 mb-4 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full p-4 mb-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             required
           />
 
@@ -125,38 +168,12 @@ export default function Register() {
 
           <input
             name="phone"
-            placeholder="Phone number"
+            placeholder="Phone Number"
+            value={form.phone}
             onChange={handleChange}
-            className="w-full p-3 mb-4 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full p-4 mb-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             required
           />
-
-          {/* ROLE */}
-
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="w-full p-3 mb-4 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-
-            <option value="RESIDENT">
-              RESIDENT
-            </option>
-
-            <option value="GUARD">
-              GUARD
-            </option>
-
-            <option value="STAFF">
-              STAFF
-            </option>
-
-            <option value="ADMIN">
-              ADMIN
-            </option>
-
-          </select>
 
           {/* PASSWORD */}
 
@@ -164,18 +181,19 @@ export default function Register() {
             name="password"
             type="password"
             placeholder="Password"
+            value={form.password}
             onChange={handleChange}
-            className="w-full p-3 mb-6 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full p-4 mb-6 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             required
           />
 
           {/* BUTTON */}
 
           <button
-            className="w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+            className="w-full bg-indigo-600 text-white p-4 rounded-xl font-semibold hover:bg-indigo-700 transition"
           >
 
-            Create Account
+            Register
 
           </button>
 
@@ -190,7 +208,7 @@ export default function Register() {
               className="text-indigo-600 font-semibold hover:underline"
             >
 
-              Sign in
+              Sign In
 
             </Link>
 
