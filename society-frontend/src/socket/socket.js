@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 const SOCKET_URL =
-  "http://localhost:5000";
+  "https://society-managment-app.onrender.com";
 
 export const socket =
   io(SOCKET_URL, {
