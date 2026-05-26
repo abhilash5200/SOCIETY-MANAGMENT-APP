@@ -494,43 +494,47 @@ export default function Facilities() {
 
       {showForm && (
 
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
 
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
 
-            <div className="flex items-center justify-between mb-4">
+            <div className="p-6 sticky top-0 bg-white border-b">
 
-              <h2 className="text-2xl font-bold text-gray-800">
+              <div className="flex items-center justify-between">
 
-                {editingId
-                  ? "Edit Facility"
-                  : "Add Facility"}
+                <h2 className="text-2xl font-bold text-gray-800">
 
-              </h2>
+                  {editingId
+                    ? "Edit Facility"
+                    : "Add Facility"}
 
-              <button
+                </h2>
 
-                onClick={() => {
+                <button
 
-                  setShowForm(false);
+                  onClick={() => {
 
-                  setEditingId(null);
+                    setShowForm(false);
 
-                }}
+                    setEditingId(null);
 
-                className="text-gray-500 hover:text-gray-700"
+                  }}
 
-              >
+                  className="text-gray-500 hover:text-gray-700"
 
-                <X size={24} />
+                >
 
-              </button>
+                  <X size={24} />
+
+                </button>
+
+              </div>
 
             </div>
 
             <form
               onSubmit={handleSubmit}
-              className="space-y-4"
+              className="space-y-4 p-6"
             >
 
               {/* NAME */}
@@ -775,7 +779,7 @@ export default function Facilities() {
 
               {/* BUTTONS */}
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-8 pb-2">
 
                 <button
 
