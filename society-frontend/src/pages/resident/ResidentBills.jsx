@@ -202,6 +202,18 @@ export default function ResidentBills() {
 
                   <p className="text-gray-500 mb-1">
 
+                     Reason:{" "}
+
+                     <span className="font-medium text-gray-700">
+
+                        {bill.reason}
+
+                     </span>
+
+                   </p>
+
+                  <p className="text-gray-500 mb-1">
+
                     Due Date:{" "}
 
                     {new Date(

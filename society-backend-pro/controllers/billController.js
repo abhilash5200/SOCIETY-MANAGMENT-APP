@@ -1,23 +1,34 @@
 import Bill from "../models/Bill.js";
 import User from "../models/User.js";
 
-
 /* ================= CREATE BILL ================= */
 
 export const createBill = async (req, res) => {
   try {
 
-    const { flatId, amount, dueDate } = req.body;
+    const {
+      flatId,
+      amount,
+      reason,
+      dueDate
+    } = req.body;
 
-    if (!flatId || !amount || !dueDate) {
+    if (
+      !flatId ||
+      !amount ||
+      !reason ||
+      !dueDate
+    ) {
       return res.status(400).json({
-        message: "flatId, amount and dueDate are required"
+        message:
+          "flatId, amount, reason and dueDate are required"
       });
     }
 
     const bill = await Bill.create({
-      flat: flatId,                 // ⭐ maps correctly
+      flat: flatId,
       amount,
+      reason,
       dueDate,
       generatedBy: req.user.id,
       paid: false
@@ -26,8 +37,16 @@ export const createBill = async (req, res) => {
     res.status(201).json(bill);
 
   } catch (err) {
-    console.error("Create bill error:", err);
-    res.status(500).json({ message: err.message });
+
+    console.error(
+      "Create bill error:",
+      err
+    );
+
+    res.status(500).json({
+      message: err.message
+    });
+
   }
 };
 
@@ -37,24 +56,48 @@ export const createBill = async (req, res) => {
 export const payBill = async (req, res) => {
   try {
 
-    const { paymentMethod } = req.body;
+    const { paymentMethod } =
+      req.body;
 
-    const bill = await Bill.findById(req.params.id);
+    const bill =
+      await Bill.findById(
+        req.params.id
+      );
 
-    if (!bill)
-      return res.status(404).json({ message: "Bill not found" });
+    if (!bill) {
+
+      return res.status(404).json({
+        message: "Bill not found"
+      });
+
+    }
 
     bill.paid = true;
-    bill.paymentMethod = paymentMethod;
-    bill.paymentDate = new Date();
+
+    bill.paymentMethod =
+      paymentMethod;
+
+    bill.paymentDate =
+      new Date();
 
     await bill.save();
 
-    res.json({ message: "Bill paid successfully" });
+    res.json({
+      message:
+        "Bill paid successfully"
+    });
 
   } catch (err) {
-    console.error("Pay bill error:", err);
-    res.status(500).json({ message: err.message });
+
+    console.error(
+      "Pay bill error:",
+      err
+    );
+
+    res.status(500).json({
+      message: err.message
+    });
+
   }
 };
 
@@ -62,36 +105,78 @@ export const payBill = async (req, res) => {
 /* ================= GET BILLS ================= */
 
 export const getBills = async (req, res) => {
+
   try {
 
-    const user = await User.findById(req.user.id).populate("flat");
+    const user =
+      await User.findById(
+        req.user.id
+      ).populate("flat");
 
     let bills = [];
 
-    // ⭐ ADMIN — ALL BILLS
-    if (req.user.role === "ADMIN") {
+    // ================= ADMIN =================
+
+    if (
+      req.user.role === "ADMIN"
+    ) {
 
       bills = await Bill.find()
-        .populate("flat", "block flatNumber")       // ⭐ IMPORTANT FIX
-        .populate("generatedBy", "name")
-        .sort({ createdAt: -1 });
+
+        .populate(
+          "flat",
+          "block flatNumber"
+        )
+
+        .populate(
+          "generatedBy",
+          "name"
+        )
+
+        .sort({
+          createdAt: -1
+        });
 
     }
 
-    // ⭐ RESIDENT — OWN FLAT BILLS
-    else if (req.user.role === "RESIDENT") {
+    // ================= RESIDENT =================
 
-      bills = await Bill.find({ flat: user.flat })
-        .populate("flat", "block flatNumber")       // ⭐ ADDED
-        .populate("generatedBy", "name")
-        .sort({ createdAt: -1 });
+    else if (
+      req.user.role === "RESIDENT"
+    ) {
+
+      bills = await Bill.find({
+        flat: user.flat
+      })
+
+        .populate(
+          "flat",
+          "block flatNumber"
+        )
+
+        .populate(
+          "generatedBy",
+          "name"
+        )
+
+        .sort({
+          createdAt: -1
+        });
 
     }
 
     res.json(bills);
 
   } catch (err) {
-    console.error("Get bills error:", err);
-    res.status(500).json({ message: err.message });
+
+    console.error(
+      "Get bills error:",
+      err
+    );
+
+    res.status(500).json({
+      message: err.message
+    });
+
   }
 };

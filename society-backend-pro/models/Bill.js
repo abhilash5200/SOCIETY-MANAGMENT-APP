@@ -13,6 +13,12 @@ const billSchema = new mongoose.Schema(
       required: true
     },
 
+    reason: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
     dueDate: {
       type: Date,
       required: true

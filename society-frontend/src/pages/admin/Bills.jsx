@@ -25,6 +25,7 @@ export default function Bills() {
 
       flatId: "",
       amount: "",
+      reason: "",
       dueDate: ""
 
     });
@@ -126,6 +127,7 @@ export default function Bills() {
 
         flatId: "",
         amount: "",
+        reason: "",
         dueDate: ""
 
       });
@@ -248,7 +250,7 @@ export default function Bills() {
 
         <form
           onSubmit={handleSubmit}
-          className="grid md:grid-cols-2 xl:grid-cols-4 gap-5"
+          className="grid md:grid-cols-2 xl:grid-cols-5 gap-5"
         >
 
           {/* FLAT */}
@@ -291,6 +293,16 @@ export default function Bills() {
             onChange={handleChange}
             className="border rounded-2xl p-4"
             required
+          />
+          {/* REASON */}
+
+          <input
+           name="reason"
+           placeholder="Reason"
+           value={form.reason}
+           onChange={handleChange}
+           className="border rounded-2xl p-4"
+           required
           />
 
           {/* DATE */}
@@ -349,6 +361,10 @@ export default function Bills() {
                 </th>
 
                 <th>
+                  Reason
+                </th>
+
+                <th>
                   Due Date
                 </th>
 
@@ -380,6 +396,12 @@ export default function Bills() {
                   <td className="font-medium">
 
                     ₹ {b.amount}
+
+                  </td>
+
+                  <td>
+
+                    {b.reason}
 
                   </td>
 
@@ -422,7 +444,7 @@ export default function Bills() {
                 <tr>
 
                   <td
-                    colSpan="4"
+                    colSpan="5"
                     className="text-center p-10 text-gray-500"
                   >
 
