@@ -10,6 +10,7 @@ import {
   Users,
   Car,
   User,
+  Building2,
   LogOut
 } from "lucide-react";
 
@@ -69,6 +70,12 @@ export default function ResidentSidebar() {
       name: "Parking",
       to: "/resident/parking",
       icon: <Car size={20} />
+    },
+
+    {
+      name: "Facilities",
+      to: "/resident/facilities",
+      icon: <Building2 size={20} />
     },
 
     {

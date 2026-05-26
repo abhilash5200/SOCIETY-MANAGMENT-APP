@@ -27,6 +27,7 @@ import Staff from "./pages/admin/Staff";
 import Bills from "./pages/admin/Bills";
 import Notices from "./pages/admin/Notices";
 import Parking from "./pages/admin/Parking";
+import Facilities from "./pages/admin/Facilities";
 
 // ================= RESIDENT =================
 
@@ -37,6 +38,7 @@ import ResidentNotices from "./pages/resident/ResidentNotices";
 import ResidentVisitors from "./pages/resident/ResidentVisitors";
 import ResidentParking from "./pages/resident/ResidentParking";
 import ResidentProfile from "./pages/resident/ResidentProfile";
+import ResidentFacilities from "./pages/resident/ResidentFacilities";
 
 // ================= GUARD =================
 
@@ -246,6 +248,25 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/admin/facilities"
+          element={
+
+            <ProtectedRoute>
+
+              <RoleRoute
+                allowedRoles={["ADMIN"]}
+              >
+
+                <Facilities />
+
+              </RoleRoute>
+
+            </ProtectedRoute>
+
+          }
+        />
+
         {/* ================= RESIDENT ================= */}
 
         <Route
@@ -354,6 +375,25 @@ export default function App() {
               >
 
                 <ResidentParking />
+
+              </RoleRoute>
+
+            </ProtectedRoute>
+
+          }
+        />
+
+        <Route
+          path="/resident/facilities"
+          element={
+
+            <ProtectedRoute>
+
+              <RoleRoute
+                allowedRoles={["RESIDENT"]}
+              >
+
+                <ResidentFacilities />
 
               </RoleRoute>
 

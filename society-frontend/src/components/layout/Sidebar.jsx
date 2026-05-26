@@ -7,7 +7,8 @@ import {
   Truck,
   UserCog,
   CreditCard,
-  Car
+  Car,
+  CalendarDays
 } from "lucide-react";
 
 import {
@@ -74,6 +75,12 @@ export default function Sidebar() {
       name: "Parking",
       to: "/admin/parking",
       icon: <Car size={20} />
+    },
+
+    {
+      name: "Facilities",
+      to: "/admin/facilities",
+      icon: <CalendarDays size={20} />
     }
 
   ];
