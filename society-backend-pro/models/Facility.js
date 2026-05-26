@@ -13,6 +13,21 @@ const facilitySchema = new mongoose.Schema(
 
     capacity: Number,
 
+    isPaid: {
+      type: Boolean,
+      default: false
+    },
+
+    price: {
+      type: Number,
+      default: 0
+    },
+
+    maxSlotsPerDay: {
+      type: Number,
+      default: 8
+    },
+
     isActive: {
       type: Boolean,
       default: true

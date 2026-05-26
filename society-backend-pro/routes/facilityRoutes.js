@@ -4,7 +4,8 @@ import {
   getFacilities,
   bookFacility,
   cancelBooking,
-  getBookings
+  getBookings,
+  checkSlotAvailability
 } from "../controllers/facilityController.js";
 
 import { verifyToken } from "../middleware/authMiddleware.js";
@@ -18,6 +19,10 @@ router.post("/", verifyToken(["ADMIN"]), createFacility);
 /* Everyone */
 
 router.get("/", verifyToken(["ADMIN", "RESIDENT", "GUARD"]), getFacilities);
+
+/* Check Slot Availability */
+
+router.get("/availability/check", verifyToken(["ADMIN", "RESIDENT"]), checkSlotAvailability);
 
 /* Resident booking */
 

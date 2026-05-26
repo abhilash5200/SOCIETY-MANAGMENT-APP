@@ -7,7 +7,10 @@ import {
   Plus,
   X,
   Check,
-  Trash2
+  Trash2,
+  AlertCircle,
+  Lock,
+  DollarSign
 } from "lucide-react";
 
 import ResidentLayout from "../../components/layout/ResidentLayout";
@@ -24,6 +27,10 @@ export default function ResidentFacilities() {
   const [showBookingForm, setShowBookingForm] = useState(false);
 
   const [selectedFacility, setSelectedFacility] = useState(null);
+
+  const [slotAvailability, setSlotAvailability] = useState(null);
+
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [form, setForm] = useState({
     facilityId: "",
@@ -81,6 +88,39 @@ export default function ResidentFacilities() {
     }
   };
 
+  // ================= CHECK SLOT AVAILABILITY =================
+
+  const checkAvailability = async (facilityId, date) => {
+
+    setLoadingSlots(true);
+
+    try {
+
+      const res = await api.get(
+        "/facilities/availability/check",
+        {
+          params: {
+            facilityId,
+            date
+          }
+        }
+      );
+
+      setSlotAvailability(res.data);
+
+    } catch (err) {
+
+      console.error(err);
+
+      setSlotAvailability(null);
+
+    } finally {
+
+      setLoadingSlots(false);
+
+    }
+  };
+
   // ================= OPEN BOOKING FORM =================
 
   const openBookingForm = facility => {
@@ -93,6 +133,8 @@ export default function ResidentFacilities() {
       timeSlot: ""
     });
 
+    setSlotAvailability(null);
+
     setShowBookingForm(true);
 
   };
@@ -101,11 +143,26 @@ export default function ResidentFacilities() {
 
   const handleChange = e => {
 
+    const { name, value } = e.target;
+
     setForm({
       ...form,
-      [e.target.name]: e.target.value
+      [name]: value
     });
 
+    // Check availability when date changes
+    if (
+      name === "date" &&
+      value &&
+      form.facilityId
+    ) {
+
+      checkAvailability(
+        form.facilityId,
+        value
+      );
+
+    }
   };
 
   // ================= CREATE BOOKING =================
@@ -114,9 +171,14 @@ export default function ResidentFacilities() {
 
     e.preventDefault();
 
-    if (!form.date || !form.timeSlot) {
+    if (
+      !form.date ||
+      !form.timeSlot
+    ) {
 
-      alert("Please select date and time slot");
+      alert(
+        "Please select date and time slot"
+      );
 
       return;
 
@@ -126,7 +188,9 @@ export default function ResidentFacilities() {
 
       const bookingData = {
         facilityId: form.facilityId,
-        date: new Date(form.date).toISOString(),
+        date: new Date(
+          form.date
+        ).toISOString(),
         timeSlot: form.timeSlot
       };
 
@@ -145,9 +209,13 @@ export default function ResidentFacilities() {
 
       setSelectedFacility(null);
 
+      setSlotAvailability(null);
+
       await fetchFacilitiesAndBookings();
 
-      alert("Facility booked successfully!");
+      alert(
+        "Facility booked successfully!"
+      );
 
     } catch (err) {
 
@@ -261,89 +329,168 @@ export default function ResidentFacilities() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-              {facilities.map(facility => (
+              {facilities.map(facility => {
 
-                <div
+                // Get booked count for today
+                const today = new Date()
+                  .toISOString()
+                  .split("T")[0];
 
-                  key={facility._id}
+                const todayBookings =
+                  bookings.filter(
+                    b =>
+                      b.facility._id ===
+                        facility._id &&
+                      new Date(b.date)
+                        .toISOString()
+                        .split("T")[0] === today &&
+                      b.status ===
+                        "CONFIRMED"
+                  );
 
-                  className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
+                const isFullyBooked =
+                  todayBookings.length >=
+                  facility.maxSlotsPerDay;
 
-                >
+                return (
 
-                  <div className="flex items-start justify-between mb-3">
+                  <div
 
-                    <Building2
+                    key={facility._id}
 
-                      size={32}
+                    className={`rounded-lg shadow-md p-6 hover:shadow-lg transition ${
+                      isFullyBooked
+                        ? "bg-gray-50 border-2 border-red-300"
+                        : "bg-white"
+                    }`}
 
-                      className="text-blue-600"
+                  >
 
-                    />
+                    <div className="flex items-start justify-between mb-3">
 
-                  </div>
+                      <Building2
 
-                  <h3 className="text-lg font-semibold text-gray-800">
+                        size={32}
 
-                    {facility.name}
+                        className="text-blue-600"
 
-                  </h3>
+                      />
 
-                  {facility.description && (
+                      {isFullyBooked && (
 
-                    <p className="text-gray-600 text-sm mt-2">
+                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
 
-                      {facility.description}
+                          <Lock size={14} />
 
-                    </p>
+                          BOOKING CLOSED
 
-                  )}
+                        </span>
 
-                  {facility.location && (
-
-                    <div className="flex items-center gap-2 text-gray-600 mt-3">
-
-                      <MapPin size={16} />
-
-                      <span>{facility.location}</span>
+                      )}
 
                     </div>
 
-                  )}
+                    <h3 className="text-lg font-semibold text-gray-800">
 
-                  {facility.capacity && (
+                      {facility.name}
 
-                    <div className="flex items-center gap-2 text-gray-600 mt-2">
+                    </h3>
 
-                      <Users size={16} />
+                    {facility.description && (
 
-                      <span>
-                        Capacity: {facility.capacity}
+                      <p className="text-gray-600 text-sm mt-2">
+
+                        {facility.description}
+
+                      </p>
+
+                    )}
+
+                    {facility.location && (
+
+                      <div className="flex items-center gap-2 text-gray-600 mt-3">
+
+                        <MapPin size={16} />
+
+                        <span>
+                          {facility.location}
+                        </span>
+
+                      </div>
+
+                    )}
+
+                    {facility.capacity && (
+
+                      <div className="flex items-center gap-2 text-gray-600 mt-2">
+
+                        <Users size={16} />
+
+                        <span>
+                          Capacity: {facility.capacity}
+                        </span>
+
+                      </div>
+
+                    )}
+
+                    {/* PRICING */}
+
+                    {facility.isPaid && (
+
+                      <div className="flex items-center gap-2 text-blue-600 mt-2 font-semibold">
+
+                        <DollarSign size={16} />
+
+                        <span>
+                          ₹{facility.price}
+                        </span>
+
+                      </div>
+
+                    )}
+
+                    {/* AVAILABLE SLOTS */}
+
+                    <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
+
+                      <span className="text-gray-700">
+
+                        Available Slots Today: {facility.maxSlotsPerDay - todayBookings.length} / {facility.maxSlotsPerDay}
+
                       </span>
 
                     </div>
 
-                  )}
+                    <button
 
-                  <button
+                      onClick={() =>
+                        openBookingForm(facility)
+                      }
 
-                    onClick={() =>
-                      openBookingForm(facility)
-                    }
+                      disabled={isFullyBooked}
 
-                    className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
+                      className={`mt-4 w-full font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2 ${
+                        isFullyBooked
+                          ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                      }`}
 
-                  >
+                    >
 
-                    <Plus size={18} />
+                      <Plus size={18} />
 
-                    Book Now
+                      {isFullyBooked
+                        ? "Fully Booked"
+                        : "Book Now"}
 
-                  </button>
+                    </button>
 
-                </div>
+                  </div>
 
-              ))}
+                );
+
+              })}
 
             </div>
 
@@ -393,7 +540,8 @@ export default function ResidentFacilities() {
 
                     <p className="text-gray-600 text-sm mt-1">
 
-                      📅 {new Date(
+                      📅{" "}
+                      {new Date(
                         booking.date
                       ).toLocaleDateString()}
 
@@ -404,6 +552,18 @@ export default function ResidentFacilities() {
                       ⏰ {booking.timeSlot}
 
                     </p>
+
+                    {booking.facility
+                      .isPaid && (
+
+                      <p className="text-blue-600 text-sm font-semibold mt-1">
+
+                        💰 ₹
+                        {booking.facility.price}
+
+                      </p>
+
+                    )}
 
                   </div>
 
@@ -449,15 +609,29 @@ export default function ResidentFacilities() {
 
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 
-            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96 max-h-96 overflow-y-auto">
 
               <div className="flex items-center justify-between mb-4">
 
-                <h2 className="text-2xl font-bold text-gray-800">
+                <div>
 
-                  Book {selectedFacility?.name}
+                  <h2 className="text-2xl font-bold text-gray-800">
 
-                </h2>
+                    Book {selectedFacility?.name}
+
+                  </h2>
+
+                  {selectedFacility?.isPaid && (
+
+                    <p className="text-blue-600 font-semibold text-lg mt-1">
+
+                      ₹{selectedFacility.price}
+
+                    </p>
+
+                  )}
+
+                </div>
 
                 <button
 
@@ -466,6 +640,8 @@ export default function ResidentFacilities() {
                     setShowBookingForm(false);
 
                     setSelectedFacility(null);
+
+                    setSlotAvailability(null);
 
                   }}
 
@@ -528,38 +704,98 @@ export default function ResidentFacilities() {
 
                   </label>
 
-                  <select
+                  {loadingSlots ? (
 
-                    name="timeSlot"
+                    <p className="text-gray-600 text-sm">
+                      Loading available slots...
+                    </p>
 
-                    value={form.timeSlot}
+                  ) : slotAvailability ? (
 
-                    onChange={handleChange}
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      {slotAvailability.availability.map(
+                        slot => (
 
-                    required
+                          <label
 
-                  >
+                            key={
+                              slot.timeSlot
+                            }
 
-                    <option value="">
-                      Select a time slot
-                    </option>
+                            className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition ${
+                              slot.available
+                                ? "border-gray-300 hover:border-blue-600 hover:bg-blue-50"
+                                : "border-red-300 bg-red-50 cursor-not-allowed"
+                            }`}
 
-                    {timeSlots.map(slot => (
+                          >
 
-                      <option
-                        key={slot}
-                        value={slot}
-                      >
+                            <input
 
-                        {slot}
+                              type="radio"
 
-                      </option>
+                              name="timeSlot"
 
-                    ))}
+                              value={
+                                slot.timeSlot
+                              }
 
-                  </select>
+                              checked={
+                                form.timeSlot ===
+                                slot.timeSlot
+                              }
+
+                              onChange={
+                                handleChange
+                              }
+
+                              disabled={
+                                !slot.available
+                              }
+
+                              className="w-4 h-4"
+
+                            />
+
+                            <span
+                              className={`ml-3 font-semibold ${
+                                slot.available
+                                  ? "text-gray-800"
+                                  : "text-gray-500 line-through"
+                              }`}
+                            >
+
+                              {slot.timeSlot}
+
+                            </span>
+
+                            {!slot.available && (
+
+                              <span className="ml-auto text-red-600 text-xs font-semibold">
+
+                                BOOKED
+
+                              </span>
+
+                            )}
+
+                          </label>
+
+                        )
+                      )}
+
+                    </div>
+
+                  ) : (
+
+                    <p className="text-gray-600 text-sm">
+
+                      Please select a date first
+
+                    </p>
+
+                  )}
 
                 </div>
 
@@ -588,6 +824,8 @@ export default function ResidentFacilities() {
                       setShowBookingForm(false);
 
                       setSelectedFacility(null);
+
+                      setSlotAvailability(null);
 
                     }}
 

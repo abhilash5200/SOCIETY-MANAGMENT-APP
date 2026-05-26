@@ -189,3 +189,95 @@ export const getBookings = async (req, res) => {
 
   }
 };
+
+/* ================= CHECK SLOT AVAILABILITY ================= */
+
+export const checkSlotAvailability = async (req, res) => {
+  try {
+
+    const {
+      facilityId,
+      date
+    } = req.query;
+
+    const facility =
+      await Facility.findById(
+        facilityId
+      );
+
+    if (!facility) {
+
+      return res.status(404).json({
+        message: "Facility not found"
+      });
+
+    }
+
+    const startDate =
+      new Date(date);
+
+    startDate.setHours(
+      0, 0, 0, 0
+    );
+
+    const endDate =
+      new Date(date);
+
+    endDate.setHours(
+      23, 59, 59, 999
+    );
+
+    const bookedSlots =
+      await Booking.find({
+        facility: facilityId,
+        date: {
+          $gte: startDate,
+          $lte: endDate
+        },
+        status: "CONFIRMED"
+      }).select("timeSlot");
+
+    const bookedTimeSlots =
+      bookedSlots.map(
+        b => b.timeSlot
+      );
+
+    const timeSlots = [
+      "09:00-10:00",
+      "10:00-11:00",
+      "11:00-12:00",
+      "14:00-15:00",
+      "15:00-16:00",
+      "16:00-17:00",
+      "17:00-18:00",
+      "18:00-19:00"
+    ];
+
+    const availability =
+      timeSlots.map(slot => ({
+        timeSlot: slot,
+        available: !bookedTimeSlots.includes(slot)
+      }));
+
+    const totalBooked =
+      bookedSlots.length;
+
+    const isFullyBooked =
+      totalBooked >= facility.maxSlotsPerDay;
+
+    res.json({
+      facility,
+      availability,
+      isFullyBooked,
+      totalBooked,
+      maxSlots: facility.maxSlotsPerDay
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: err.message
+    });
+
+  }
+};

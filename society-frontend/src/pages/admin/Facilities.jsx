@@ -27,6 +27,9 @@ export default function Facilities() {
     description: "",
     location: "",
     capacity: "",
+    isPaid: false,
+    price: "",
+    maxSlotsPerDay: 8,
     isActive: true
   });
 
@@ -90,6 +93,9 @@ export default function Facilities() {
         description: facility.description || "",
         location: facility.location || "",
         capacity: facility.capacity || "",
+        isPaid: facility.isPaid || false,
+        price: facility.price || "",
+        maxSlotsPerDay: facility.maxSlotsPerDay || 8,
         isActive: facility.isActive
       });
 
@@ -102,6 +108,9 @@ export default function Facilities() {
         description: "",
         location: "",
         capacity: "",
+        isPaid: false,
+        price: "",
+        maxSlotsPerDay: 8,
         isActive: true
       });
 
@@ -318,6 +327,12 @@ export default function Facilities() {
 
                   <th className="text-left px-6 py-3 font-semibold text-gray-700">
 
+                    Type
+
+                  </th>
+
+                  <th className="text-left px-6 py-3 font-semibold text-gray-700">
+
                     Status
 
                   </th>
@@ -382,6 +397,26 @@ export default function Facilities() {
                     <td className="px-6 py-3 text-gray-600">
 
                       {facility.capacity || "-"}
+
+                    </td>
+
+                    <td className="px-6 py-3">
+
+                      <div className="flex flex-col gap-1">
+
+                        <span className={`px-2 py-1 rounded text-xs font-semibold w-fit ${
+                          facility.isPaid
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}>
+
+                          {facility.isPaid
+                            ? `Paid - ₹${facility.price}`
+                            : "Free"}
+
+                        </span>
+
+                      </div>
 
                     </td>
 
@@ -640,6 +675,101 @@ export default function Facilities() {
                   Active
 
                 </label>
+
+              </div>
+
+              {/* PAID/FREE */}
+
+              <div className="flex items-center gap-3">
+
+                <input
+
+                  type="checkbox"
+
+                  id="isPaid"
+
+                  name="isPaid"
+
+                  checked={form.isPaid}
+
+                  onChange={handleChange}
+
+                  className="w-4 h-4 text-indigo-600 cursor-pointer"
+
+                />
+
+                <label
+                  htmlFor="isPaid"
+                  className="text-gray-700 font-semibold cursor-pointer"
+                >
+
+                  Paid Facility
+
+                </label>
+
+              </div>
+
+              {/* PRICE (CONDITIONAL) */}
+
+              {form.isPaid && (
+
+                <div>
+
+                  <label className="block text-gray-700 font-semibold mb-2">
+
+                    Price (₹)
+
+                  </label>
+
+                  <input
+
+                    type="number"
+
+                    name="price"
+
+                    value={form.price}
+
+                    onChange={handleChange}
+
+                    placeholder="e.g., 500"
+
+                    step="0.01"
+
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+
+                    required={form.isPaid}
+
+                  />
+
+                </div>
+
+              )}
+
+              {/* MAX SLOTS */}
+
+              <div>
+
+                <label className="block text-gray-700 font-semibold mb-2">
+
+                  Max Slots Per Day
+
+                </label>
+
+                <input
+
+                  type="number"
+
+                  name="maxSlotsPerDay"
+
+                  value={form.maxSlotsPerDay}
+
+                  onChange={handleChange}
+
+                  min="1"
+
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+
+                />
 
               </div>
 
