@@ -28,6 +28,7 @@ import Bills from "./pages/admin/Bills";
 import Notices from "./pages/admin/Notices";
 import Parking from "./pages/admin/Parking";
 import Facilities from "./pages/admin/Facilities";
+import AdminBookings from "./pages/admin/Bookings";
 
 // ================= RESIDENT =================
 
@@ -39,6 +40,8 @@ import ResidentVisitors from "./pages/resident/ResidentVisitors";
 import ResidentParking from "./pages/resident/ResidentParking";
 import ResidentProfile from "./pages/resident/ResidentProfile";
 import ResidentFacilities from "./pages/resident/ResidentFacilities";
+import BookingForm from "./pages/resident/BookingForm";
+import MyBookings from "./pages/resident/MyBookings";
 
 // ================= GUARD =================
 
@@ -267,6 +270,25 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/admin/bookings"
+          element={
+
+            <ProtectedRoute>
+
+              <RoleRoute
+                allowedRoles={["ADMIN"]}
+              >
+
+                <AdminBookings />
+
+              </RoleRoute>
+
+            </ProtectedRoute>
+
+          }
+        />
+
         {/* ================= RESIDENT ================= */}
 
         <Route
@@ -413,6 +435,44 @@ export default function App() {
               >
 
                 <ResidentProfile />
+
+              </RoleRoute>
+
+            </ProtectedRoute>
+
+          }
+        />
+
+        <Route
+          path="/resident/booking"
+          element={
+
+            <ProtectedRoute>
+
+              <RoleRoute
+                allowedRoles={["RESIDENT"]}
+              >
+
+                <BookingForm />
+
+              </RoleRoute>
+
+            </ProtectedRoute>
+
+          }
+        />
+
+        <Route
+          path="/resident/my-bookings"
+          element={
+
+            <ProtectedRoute>
+
+              <RoleRoute
+                allowedRoles={["RESIDENT"]}
+              >
+
+                <MyBookings />
 
               </RoleRoute>
 

@@ -30,11 +30,14 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["CONFIRMED", "CANCELLED"],
+      enum: ["CONFIRMED", "CANCELLED", "COMPLETED"],
       default: "CONFIRMED"
     }
   },
   { timestamps: true }
 );
+
+bookingSchema.index({ facility: 1, date: 1, timeSlot: 1, status: 1 });
+bookingSchema.index({ bookedBy: 1, date: 1 });
 
 export default mongoose.model("Booking", bookingSchema);

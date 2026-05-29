@@ -26,11 +26,7 @@ export default function Facilities() {
     name: "",
     description: "",
     location: "",
-    capacity: "",
-    isPaid: false,
-    price: "",
-    maxSlotsPerDay: 8,
-    isActive: true
+    capacity: ""
   });
 
   useEffect(() => {
@@ -44,13 +40,13 @@ export default function Facilities() {
     try {
 
       const res = await api.get(
-        "/facilities"
+        "/facilities/admin/all"
       );
 
       setFacilities(
-        Array.isArray(res.data)
-          ? res.data
-          : []
+        Array.isArray(res.data?.data)
+          ? res.data.data
+          : res.data
       );
 
     } catch (err) {
@@ -92,11 +88,7 @@ export default function Facilities() {
         name: facility.name,
         description: facility.description || "",
         location: facility.location || "",
-        capacity: facility.capacity || "",
-        isPaid: facility.isPaid || false,
-        price: facility.price || "",
-        maxSlotsPerDay: facility.maxSlotsPerDay || 8,
-        isActive: facility.isActive
+        capacity: facility.capacity || ""
       });
 
     } else {
@@ -107,11 +99,7 @@ export default function Facilities() {
         name: "",
         description: "",
         location: "",
-        capacity: "",
-        isPaid: false,
-        price: "",
-        maxSlotsPerDay: 8,
-        isActive: true
+        capacity: ""
       });
 
     }
@@ -138,7 +126,7 @@ export default function Facilities() {
 
       if (editingId) {
 
-        await api.put(
+        await api.patch(
           `/facilities/${editingId}`,
           form
         );
@@ -161,8 +149,7 @@ export default function Facilities() {
         name: "",
         description: "",
         location: "",
-        capacity: "",
-        isActive: true
+        capacity: ""
       });
 
       setEditingId(null);
@@ -181,37 +168,27 @@ export default function Facilities() {
     }
   };
 
-  // ================= DELETE =================
+  // ================= TOGGLE STATUS =================
 
-  const handleDelete = async facilityId => {
-
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this facility?"
-      )
-    ) {
-
-      return;
-
-    }
+  const handleToggleStatus = async facilityId => {
 
     try {
 
-      await api.delete(
-        `/facilities/${facilityId}`
+      await api.patch(
+        `/facilities/${facilityId}/toggle-status`
       );
 
       fetchFacilities();
 
       alert(
-        "Facility deleted successfully!"
+        "Facility status updated successfully!"
       );
 
     } catch (err) {
 
       alert(
         err.response?.data?.message ||
-        "Failed to delete facility"
+        "Failed to toggle facility status"
       );
 
     }
@@ -327,12 +304,6 @@ export default function Facilities() {
 
                   <th className="text-left px-6 py-3 font-semibold text-gray-700">
 
-                    Type
-
-                  </th>
-
-                  <th className="text-left px-6 py-3 font-semibold text-gray-700">
-
                     Status
 
                   </th>
@@ -402,31 +373,11 @@ export default function Facilities() {
 
                     <td className="px-6 py-3">
 
-                      <div className="flex flex-col gap-1">
-
-                        <span className={`px-2 py-1 rounded text-xs font-semibold w-fit ${
-                          facility.isPaid
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }`}>
-
-                          {facility.isPaid
-                            ? `Paid - ₹${facility.price}`
-                            : "Free"}
-
-                        </span>
-
-                      </div>
-
-                    </td>
-
-                    <td className="px-6 py-3">
-
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           facility.isActive
                             ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
 
@@ -459,16 +410,20 @@ export default function Facilities() {
                         <button
 
                           onClick={() =>
-                            handleDelete(
+                            handleToggleStatus(
                               facility._id
                             )
                           }
 
-                          className="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg transition"
+                          className={`text-white p-2 rounded-lg transition ${
+                            facility.isActive
+                              ? "bg-red-100 hover:bg-red-200 text-red-600"
+                              : "bg-green-100 hover:bg-green-200 text-green-600"
+                          }`}
 
                         >
 
-                          <Trash2 size={18} />
+                          {facility.isActive ? "Disable" : "Enable"}
 
                         </button>
 
