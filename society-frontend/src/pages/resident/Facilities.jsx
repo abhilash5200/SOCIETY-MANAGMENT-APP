@@ -17,10 +17,15 @@ const ResidentFacilities = () => {
     try {
       setLoading(true);
       const response = await axios.get('/facilities');
-      setFacilities(response.data.data);
+      // Handle both wrapped and unwrapped response formats
+      const facilitiesData = Array.isArray(response.data) 
+        ? response.data 
+        : response.data?.data || [];
+      setFacilities(facilitiesData);
       setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch facilities');
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }

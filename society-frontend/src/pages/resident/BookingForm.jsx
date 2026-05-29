@@ -44,7 +44,16 @@ const BookingForm = () => {
         }
       });
 
-      setAvailability(response.data.data);
+      // Handle both wrapped and unwrapped response formats
+      let availabilityData;
+      if (response.data?.data) {
+        availabilityData = response.data;
+      } else if (response.data?.availability) {
+        availabilityData = { data: response.data };
+      } else {
+        availabilityData = response.data;
+      }
+      setAvailability(availabilityData);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch availability');
       setAvailability(null);

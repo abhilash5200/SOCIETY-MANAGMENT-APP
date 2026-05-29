@@ -19,7 +19,11 @@ export default function AdminBookings() {
     try {
       setLoading(true);
       const res = await api.get("/facilities/bookings/list");
-      setBookings(res.data?.data || []);
+      // Handle both wrapped and unwrapped response formats
+      const bookingsData = Array.isArray(res.data) 
+        ? res.data 
+        : res.data?.data || [];
+      setBookings(bookingsData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -30,7 +34,7 @@ export default function AdminBookings() {
   const fetchStats = async () => {
     try {
       const res = await api.get("/facilities/admin/stats/bookings");
-      setStats(res.data?.data);
+      setStats(res.data?.data || res.data);
     } catch (err) {
       console.error(err);
     }

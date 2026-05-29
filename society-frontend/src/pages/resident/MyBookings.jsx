@@ -25,7 +25,11 @@ const MyBookings = () => {
       }
 
       const response = await axios.get(endpoint);
-      setBookings(response.data.data);
+      // Handle both wrapped and unwrapped response formats
+      const bookingsData = Array.isArray(response.data) 
+        ? response.data 
+        : response.data?.data || [];
+      setBookings(bookingsData);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch bookings');
       setBookings([]);
