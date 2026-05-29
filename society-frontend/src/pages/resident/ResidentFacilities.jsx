@@ -20,8 +20,6 @@ export default function ResidentFacilities() {
 
   const [facilities, setFacilities] = useState([]);
 
-  const [bookings, setBookings] = useState([]);
-
   const [loading, setLoading] = useState(true);
 
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -59,22 +57,12 @@ export default function ResidentFacilities() {
 
     try {
 
-      const [facilitiesRes, bookingsRes] =
-        await Promise.all([
-          api.get("/facilities"),
-          api.get("/facilities/bookings")
-        ]);
+      const facilitiesRes = await api.get("/facilities");
 
       setFacilities(
         Array.isArray(facilitiesRes.data)
           ? facilitiesRes.data
-          : []
-      );
-
-      setBookings(
-        Array.isArray(bookingsRes.data)
-          ? bookingsRes.data
-          : []
+          : facilitiesRes.data?.data || []
       );
 
     } catch (err) {
@@ -188,14 +176,12 @@ export default function ResidentFacilities() {
 
       const bookingData = {
         facilityId: form.facilityId,
-        date: new Date(
-          form.date
-        ).toISOString(),
+        date: form.date,
         timeSlot: form.timeSlot
       };
 
       await api.post(
-        "/facilities/book",
+        "/facilities/book/create",
         bookingData
       );
 
@@ -208,8 +194,6 @@ export default function ResidentFacilities() {
       setShowBookingForm(false);
 
       setSelectedFacility(null);
-
-      setSlotAvailability(null);
 
       await fetchFacilitiesAndBookings();
 
@@ -260,12 +244,6 @@ export default function ResidentFacilities() {
 
     }
   };
-
-  // ================= FILTER BOOKINGS =================
-
-  const myBookings = bookings.filter(
-    b => b.status === "CONFIRMED"
-  );
 
   if (loading) {
 
@@ -331,38 +309,13 @@ export default function ResidentFacilities() {
 
               {facilities.map(facility => {
 
-                // Get booked count for today
-                const today = new Date()
-                  .toISOString()
-                  .split("T")[0];
-
-                const todayBookings =
-                  bookings.filter(
-                    b =>
-                      b.facility._id ===
-                        facility._id &&
-                      new Date(b.date)
-                        .toISOString()
-                        .split("T")[0] === today &&
-                      b.status ===
-                        "CONFIRMED"
-                  );
-
-                const isFullyBooked =
-                  todayBookings.length >=
-                  facility.maxSlotsPerDay;
-
                 return (
 
                   <div
 
                     key={facility._id}
 
-                    className={`rounded-lg shadow-md p-6 hover:shadow-lg transition ${
-                      isFullyBooked
-                        ? "bg-gray-50 border-2 border-red-300"
-                        : "bg-white"
-                    }`}
+                    className={`rounded-lg shadow-md p-6 hover:shadow-lg transition bg-white`}
 
                   >
 
@@ -375,18 +328,6 @@ export default function ResidentFacilities() {
                         className="text-blue-600"
 
                       />
-
-                      {isFullyBooked && (
-
-                        <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-
-                          <Lock size={14} />
-
-                          BOOKING CLOSED
-
-                        </span>
-
-                      )}
 
                     </div>
 
@@ -434,54 +375,24 @@ export default function ResidentFacilities() {
 
                     )}
 
-                    {/* PRICING */}
-
-                    {facility.isPaid && (
-
-                      <div className="flex items-center gap-2 text-blue-600 mt-2 font-semibold">
-
-                        <DollarSign size={16} />
-
-                        <span>
-                          ₹{facility.price}
-                        </span>
-
-                      </div>
-
-                    )}
-
-                    {/* AVAILABLE SLOTS */}
-
-                    <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
-
-                      <span className="text-gray-700">
-
-                        Available Slots Today: {facility.maxSlotsPerDay - todayBookings.length} / {facility.maxSlotsPerDay}
-
-                      </span>
-
-                    </div>
-
                     <button
 
                       onClick={() =>
                         openBookingForm(facility)
                       }
 
-                      disabled={isFullyBooked}
+                      disabled={!facility.isActive}
 
                       className={`mt-4 w-full font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2 ${
-                        isFullyBooked
+                        !facility.isActive
                           ? "bg-gray-400 text-gray-700 cursor-not-allowed"
                           : "bg-blue-600 hover:bg-blue-700 text-white"
                       }`}
 
                     >
 
-                      <Plus size={18} />
-
-                      {isFullyBooked
-                        ? "Fully Booked"
+                      {!facility.isActive
+                        ? "Unavailable"
                         : "Book Now"}
 
                     </button>
@@ -491,111 +402,6 @@ export default function ResidentFacilities() {
                 );
 
               })}
-
-            </div>
-
-          )}
-
-        </div>
-
-        {/* ================= MY BOOKINGS ================= */}
-
-        <div>
-
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-
-            My Bookings
-
-          </h2>
-
-          {myBookings.length === 0 ? (
-
-            <div className="bg-gray-100 p-6 rounded-lg text-center text-gray-600">
-
-              No bookings yet
-
-            </div>
-
-          ) : (
-
-            <div className="space-y-3">
-
-              {myBookings.map(booking => (
-
-                <div
-
-                  key={booking._id}
-
-                  className="bg-white rounded-lg shadow-md p-4 flex items-center justify-between hover:shadow-lg transition"
-
-                >
-
-                  <div className="flex-1">
-
-                    <h3 className="text-lg font-semibold text-gray-800">
-
-                      {booking.facility.name}
-
-                    </h3>
-
-                    <p className="text-gray-600 text-sm mt-1">
-
-                      📅{" "}
-                      {new Date(
-                        booking.date
-                      ).toLocaleDateString()}
-
-                    </p>
-
-                    <p className="text-gray-600 text-sm">
-
-                      ⏰ {booking.timeSlot}
-
-                    </p>
-
-                    {booking.facility
-                      .isPaid && (
-
-                      <p className="text-blue-600 text-sm font-semibold mt-1">
-
-                        💰 ₹
-                        {booking.facility.price}
-
-                      </p>
-
-                    )}
-
-                  </div>
-
-                  <div className="flex items-center gap-3">
-
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
-
-                      <Check size={16} />
-
-                      {booking.status}
-
-                    </span>
-
-                    <button
-
-                      onClick={() =>
-                        handleCancelBooking(booking._id)
-                      }
-
-                      className="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg transition"
-
-                    >
-
-                      <Trash2 size={18} />
-
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))}
 
             </div>
 
