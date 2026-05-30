@@ -1,30 +1,71 @@
 import Facility from "../models/Facility.js";
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
+import {
+  validateFacilityRequest,
+  validateBookingRequest,
+  validatePaymentData,
+  hasActiveFreeBooking,
+  formatCurrency,
+  formatSlotTime
+} from "../validators/bookingValidator.js";
 
-/* ================= FACILITY MANAGEMENT ================= */
+// ==================== FACILITY MANAGEMENT ====================
 
-// Create Facility (Admin)
+/**
+ * Create Facility (Admin Only)
+ * Creates facility with name, description, location, capacity, booking type (FREE/PAID), price, and slots
+ */
 export const createFacility = async (req, res) => {
   try {
-    const { name, description, location, capacity } = req.body;
-
-    if (!name || !location || !capacity) {
-      return res.status(400).json({
-        message: "Name, location, and capacity are required"
-      });
-    }
-
-    const facility = await Facility.create({
+    const {
       name,
       description,
       location,
+      facilityType,
       capacity,
-      isActive: true
+      bookingType,
+      price,
+      slots,
+      amenities
+    } = req.body;
+
+    // Validation
+    const { isValid, errors } = validateFacilityRequest({
+      name,
+      location,
+      capacity,
+      bookingType,
+      price,
+      slots
+    });
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors
+      });
+    }
+
+    // Create facility
+    const facility = await Facility.create({
+      name: name.trim(),
+      description: description?.trim() || "",
+      location: location.trim(),
+      facilityType: facilityType || "OTHER",
+      capacity: parseInt(capacity),
+      bookingType,
+      price: bookingType === "PAID" ? parseInt(price) : 0,
+      slots: slots || [],
+      amenities: amenities || [],
+      isActive: true,
+      totalRevenue: 0
     });
 
     res.status(201).json({
       success: true,
+      message: "Facility created successfully",
       data: facility
     });
   } catch (err) {
@@ -35,17 +76,33 @@ export const createFacility = async (req, res) => {
   }
 };
 
-// Get All Facilities (Public/Active)
+/**
+ * Get All Active Facilities (Residents/Public)
+ * Shows available facilities with pricing and availability info
+ */
 export const getFacilities = async (req, res) => {
   try {
     const facilities = await Facility.find({
       isActive: true
-    });
+    }).sort({ createdAt: -1 });
 
-    res.json({
+    // Add availability statistics to each facility
+    const facilitiesWithStats = await Promise.all(
+      facilities.map(async (facility) => {
+        const stats = await getSlotStats(facility._id);
+        return {
+          ...facility.toObject(),
+          totalSlots: stats.totalSlots,
+          bookedSlots: stats.bookedSlots,
+          availableSlots: stats.availableSlots
+        };
+      })
+    );
+
+    res.status(200).json({
       success: true,
-      count: facilities.length,
-      data: facilities
+      count: facilitiesWithStats.length,
+      data: facilitiesWithStats
     });
   } catch (err) {
     res.status(500).json({
@@ -55,15 +112,30 @@ export const getFacilities = async (req, res) => {
   }
 };
 
-// Get All Facilities (Admin - includes inactive)
+/**
+ * Get All Facilities (Admin - includes inactive)
+ */
 export const getAllFacilities = async (req, res) => {
   try {
-    const facilities = await Facility.find();
+    const facilities = await Facility.find().sort({ createdAt: -1 });
 
-    res.json({
+    // Add availability statistics to each facility
+    const facilitiesWithStats = await Promise.all(
+      facilities.map(async (facility) => {
+        const stats = await getSlotStats(facility._id);
+        return {
+          ...facility.toObject(),
+          totalSlots: stats.totalSlots,
+          bookedSlots: stats.bookedSlots,
+          availableSlots: stats.availableSlots
+        };
+      })
+    );
+
+    res.status(200).json({
       success: true,
-      count: facilities.length,
-      data: facilities
+      count: facilitiesWithStats.length,
+      data: facilitiesWithStats
     });
   } catch (err) {
     res.status(500).json({
@@ -73,10 +145,14 @@ export const getAllFacilities = async (req, res) => {
   }
 };
 
-// Get Single Facility
+/**
+ * Get Single Facility by ID with detailed stats
+ */
 export const getFacilityById = async (req, res) => {
   try {
-    const facility = await Facility.findById(req.params.id);
+    const { id } = req.params;
+
+    const facility = await Facility.findById(id);
 
     if (!facility) {
       return res.status(404).json({
@@ -85,9 +161,16 @@ export const getFacilityById = async (req, res) => {
       });
     }
 
-    res.json({
+    const stats = await getSlotStats(facility._id);
+
+    res.status(200).json({
       success: true,
-      data: facility
+      data: {
+        ...facility.toObject(),
+        totalSlots: stats.totalSlots,
+        bookedSlots: stats.bookedSlots,
+        availableSlots: stats.availableSlots
+      }
     });
   } catch (err) {
     res.status(500).json({
@@ -97,12 +180,25 @@ export const getFacilityById = async (req, res) => {
   }
 };
 
-// Update Facility (Admin)
+/**
+ * Update Facility (Admin Only)
+ */
 export const updateFacility = async (req, res) => {
   try {
-    const { name, description, location, capacity, isActive } = req.body;
+    const { id } = req.params;
+    const {
+      name,
+      description,
+      location,
+      facilityType,
+      capacity,
+      bookingType,
+      price,
+      amenities,
+      isActive
+    } = req.body;
 
-    const facility = await Facility.findById(req.params.id);
+    const facility = await Facility.findById(id);
 
     if (!facility) {
       return res.status(404).json({
@@ -111,18 +207,32 @@ export const updateFacility = async (req, res) => {
       });
     }
 
-    if (name) facility.name = name;
-    if (description) facility.description = description;
-    if (location) facility.location = location;
-    if (capacity) facility.capacity = capacity;
-    if (isActive !== undefined) facility.isActive = isActive;
+    // Update fields if provided
+    if (name?.trim()) facility.name = name.trim();
+    if (description !== undefined) facility.description = description?.trim() || "";
+    if (location?.trim()) facility.location = location.trim();
+    if (facilityType) facility.facilityType = facilityType;
+    if (capacity && capacity >= 1) facility.capacity = parseInt(capacity);
+    if (bookingType) facility.bookingType = bookingType;
+    if (bookingType === "PAID" && price && price > 0) {
+      facility.price = parseInt(price);
+    }
+    if (amenities && Array.isArray(amenities)) facility.amenities = amenities;
+    if (isActive !== undefined) facility.isActive = Boolean(isActive);
 
     await facility.save();
 
-    res.json({
+    const stats = await getSlotStats(facility._id);
+
+    res.status(200).json({
       success: true,
       message: "Facility updated successfully",
-      data: facility
+      data: {
+        ...facility.toObject(),
+        totalSlots: stats.totalSlots,
+        bookedSlots: stats.bookedSlots,
+        availableSlots: stats.availableSlots
+      }
     });
   } catch (err) {
     res.status(500).json({
@@ -132,10 +242,14 @@ export const updateFacility = async (req, res) => {
   }
 };
 
-// Toggle Facility Status (Admin)
+/**
+ * Toggle Facility Status (Enable/Disable)
+ */
 export const toggleFacilityStatus = async (req, res) => {
   try {
-    const facility = await Facility.findById(req.params.id);
+    const { id } = req.params;
+
+    const facility = await Facility.findById(id);
 
     if (!facility) {
       return res.status(404).json({
@@ -147,9 +261,48 @@ export const toggleFacilityStatus = async (req, res) => {
     facility.isActive = !facility.isActive;
     await facility.save();
 
-    res.json({
+    const stats = await getSlotStats(facility._id);
+
+    res.status(200).json({
       success: true,
       message: `Facility ${facility.isActive ? "enabled" : "disabled"}`,
+      data: {
+        ...facility.toObject(),
+        totalSlots: stats.totalSlots,
+        bookedSlots: stats.bookedSlots,
+        availableSlots: stats.availableSlots
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+/**
+ * Delete Facility (Admin Only)
+ */
+export const deleteFacility = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const facility = await Facility.findByIdAndDelete(id);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    // Delete related bookings
+    await Booking.deleteMany({ facility: id });
+
+    res.status(200).json({
+      success: true,
+      message: "Facility deleted successfully",
       data: facility
     });
   } catch (err) {
@@ -160,23 +313,177 @@ export const toggleFacilityStatus = async (req, res) => {
   }
 };
 
-/* ================= BOOKING MANAGEMENT ================= */
+// ==================== SLOT MANAGEMENT ====================
 
-// Book Facility (Resident)
-export const bookFacility = async (req, res) => {
+/**
+ * Add Slot to Facility (Admin Only)
+ */
+export const addSlot = async (req, res) => {
   try {
-    const { facilityId, date, timeSlot } = req.body;
-    const userId = req.user.id;
+    const { facilityId } = req.params;
+    const { startTime, endTime, capacity } = req.body;
 
-    // Validation
-    if (!facilityId || !date || !timeSlot) {
-      return res.status(400).json({
+    const facility = await Facility.findById(facilityId);
+
+    if (!facility) {
+      return res.status(404).json({
         success: false,
-        message: "Facility ID, date, and time slot are required"
+        message: "Facility not found"
       });
     }
 
-    // Get facility
+    if (!startTime || !endTime || !capacity) {
+      return res.status(400).json({
+        success: false,
+        message: "Start time, end time, and capacity are required"
+      });
+    }
+
+    if (capacity < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Capacity must be at least 1"
+      });
+    }
+
+    const slot = {
+      startTime,
+      endTime,
+      capacity,
+      isActive: true
+    };
+
+    facility.slots.push(slot);
+    await facility.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Slot added successfully",
+      data: facility
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+/**
+ * Update Slot (Admin Only)
+ */
+export const updateSlot = async (req, res) => {
+  try {
+    const { facilityId, slotId } = req.params;
+    const { startTime, endTime, capacity, isActive } = req.body;
+
+    const facility = await Facility.findById(facilityId);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    const slot = facility.slots.id(slotId);
+
+    if (!slot) {
+      return res.status(404).json({
+        success: false,
+        message: "Slot not found"
+      });
+    }
+
+    if (startTime) slot.startTime = startTime;
+    if (endTime) slot.endTime = endTime;
+    if (capacity && capacity >= 1) slot.capacity = capacity;
+    if (isActive !== undefined) slot.isActive = Boolean(isActive);
+
+    await facility.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Slot updated successfully",
+      data: facility
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+/**
+ * Delete Slot (Admin Only)
+ */
+export const deleteSlot = async (req, res) => {
+  try {
+    const { facilityId, slotId } = req.params;
+
+    const facility = await Facility.findById(facilityId);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    const slot = facility.slots.id(slotId);
+
+    if (!slot) {
+      return res.status(404).json({
+        success: false,
+        message: "Slot not found"
+      });
+    }
+
+    facility.slots.pull(slotId);
+    await facility.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Slot deleted successfully",
+      data: facility
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// ==================== BOOKING MANAGEMENT ====================
+
+/**
+ * Book Facility (Resident Only)
+ * 
+ * Validation Rules:
+ * 1. Facility must exist and be active
+ * 2. Cannot book for past dates
+ * 3. No duplicate time slot bookings (same facility, date, time)
+ * 4. FREE facility: Resident can only have ONE active booking
+ * 5. PAID facility: Multiple bookings allowed
+ * 6. Capacity limits must not be exceeded
+ * 7. For PAID facilities: Payment required
+ */
+export const bookFacility = async (req, res) => {
+  try {
+    const { facilityId, date, slotId, paymentMethod } = req.body;
+    const userId = req.user.id;
+
+    // Validation: Required fields
+    if (!facilityId || !date || !slotId) {
+      return res.status(400).json({
+        success: false,
+        message: "Facility ID, date, and slot ID are required"
+      });
+    }
+
+    // Validation: Facility exists
     const facility = await Facility.findById(facilityId);
     if (!facility) {
       return res.status(404).json({
@@ -185,15 +492,24 @@ export const bookFacility = async (req, res) => {
       });
     }
 
-    // Check if facility is active
+    // Validation: Facility is active
     if (!facility.isActive) {
       return res.status(400).json({
         success: false,
-        message: "Facility is currently unavailable"
+        message: "Facility unavailable"
       });
     }
 
-    // Get user and flat info
+    // Validation: Slot exists
+    const slot = facility.slots.id(slotId);
+    if (!slot) {
+      return res.status(404).json({
+        success: false,
+        message: "Slot not found"
+      });
+    }
+
+    // Validation: User exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -202,89 +518,91 @@ export const bookFacility = async (req, res) => {
       });
     }
 
-    // Rule 1: Check if past date
+    // Validation: Cannot book past dates
     const bookingDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    bookingDate.setHours(0, 0, 0, 0);
 
     if (bookingDate < today) {
       return res.status(400).json({
         success: false,
-        message: "Cannot book for past dates"
+        message: "Cannot book past dates"
       });
     }
 
-    // Rule 2: Check duplicate booking - same facility, date, time, different resident
-    const existingTimeSlotBooking = await Booking.findOne({
+    // Validation: No duplicate slot bookings
+    const existingSlotBooking = await Booking.findOne({
       facility: facilityId,
-      date: {
-        $gte: new Date(bookingDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(bookingDate.setHours(23, 59, 59, 999))
-      },
-      timeSlot,
-      status: { $in: ["CONFIRMED"] }
-    });
-
-    if (existingTimeSlotBooking) {
-      return res.status(400).json({
-        success: false,
-        message: "Facility already booked for this slot"
-      });
-    }
-
-    // Rule 3: Check if same resident already booked same facility on same date
-    const existingResidentBooking = await Booking.findOne({
-      facility: facilityId,
-      bookedBy: userId,
-      date: {
-        $gte: new Date(bookingDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(bookingDate.setHours(23, 59, 59, 999))
-      },
-      status: { $in: ["CONFIRMED"] }
-    });
-
-    if (existingResidentBooking) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already booked this facility for this date"
-      });
-    }
-
-    // Rule 4: Check capacity if enabled
-    const slotBookings = await Booking.countDocuments({
-      facility: facilityId,
-      date: {
-        $gte: new Date(bookingDate.setHours(0, 0, 0, 0)),
-        $lte: new Date(bookingDate.setHours(23, 59, 59, 999))
-      },
-      timeSlot,
+      date: bookingDate,
+      slotId,
       status: "CONFIRMED"
     });
 
-    if (slotBookings >= facility.capacity) {
+    if (existingSlotBooking) {
       return res.status(400).json({
         success: false,
-        message: "Facility capacity reached for this slot"
+        message: "Slot already booked"
+      });
+    }
+
+    // Validation: FREE Facility - only one active booking per resident
+    if (facility.bookingType === "FREE") {
+      const hasActive = await hasActiveFreeBooking(facilityId, userId, Booking);
+      if (hasActive) {
+        return res.status(400).json({
+          success: false,
+          message: "You already have an active booking for this facility"
+        });
+      }
+    }
+
+    // Validation: Capacity check
+    const slotBookingCount = await Booking.countDocuments({
+      facility: facilityId,
+      date: bookingDate,
+      slotId,
+      status: "CONFIRMED"
+    });
+
+    if (slotBookingCount >= slot.capacity) {
+      return res.status(400).json({
+        success: false,
+        message: "Slot capacity reached"
       });
     }
 
     // Create booking
-    const booking = await Booking.create({
+    const bookingData = {
       facility: facilityId,
       flat: user.flat,
       bookedBy: userId,
       date: bookingDate,
-      timeSlot,
+      slotId,
+      timeSlot: `${slot.startTime}-${slot.endTime}`,
+      amount: facility.bookingType === "PAID" ? facility.price : 0,
       status: "CONFIRMED"
-    });
+    };
+
+    // For PAID facilities, set payment to PENDING until payment is processed
+    if (facility.bookingType === "PAID") {
+      bookingData.paymentStatus = "PENDING";
+    } else {
+      bookingData.paymentStatus = "PAID";
+    }
+
+    const booking = await Booking.create(bookingData);
 
     // Populate and return
-    await booking.populate("facility");
+    await booking.populate("facility", "name location bookingType price");
     await booking.populate("bookedBy", "name email");
+    await booking.populate("flat", "flatNumber");
 
     res.status(201).json({
       success: true,
-      message: "Facility booked successfully",
+      message: facility.bookingType === "PAID" 
+        ? "Booking created. Proceed to payment." 
+        : "Facility booked successfully",
       data: booking
     });
   } catch (err) {
@@ -295,14 +613,23 @@ export const bookFacility = async (req, res) => {
   }
 };
 
-// Cancel Booking
-export const cancelBooking = async (req, res) => {
+/**
+ * Process Payment for Booking (PAID facilities)
+ */
+export const processPayment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { bookingId } = req.params;
+    const { paymentMethod, transactionId } = req.body;
     const userId = req.user.id;
-    const userRole = req.user.role;
 
-    const booking = await Booking.findById(id);
+    if (!paymentMethod || !transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment method and transaction ID are required"
+      });
+    }
+
+    const booking = await Booking.findById(bookingId).populate("facility");
 
     if (!booking) {
       return res.status(404).json({
@@ -311,7 +638,78 @@ export const cancelBooking = async (req, res) => {
       });
     }
 
-    // Check authorization - resident can only cancel own booking
+    // Authorization check
+    if (booking.bookedBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    // Check if already paid
+    if (booking.paymentStatus === "PAID") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment already processed for this booking"
+      });
+    }
+
+    // Update payment details
+    booking.paymentStatus = "PAID";
+    booking.paymentId = transactionId;
+    booking.paymentDetails = {
+      method: paymentMethod,
+      transactionId,
+      paidAt: new Date()
+    };
+
+    await booking.save();
+
+    // Update facility revenue
+    const facility = await Facility.findById(booking.facility);
+    if (facility) {
+      facility.totalRevenue += booking.amount;
+      await facility.save();
+    }
+
+    await booking.populate("facility", "name price");
+
+    res.status(200).json({
+      success: true,
+      message: "Payment processed successfully",
+      data: booking
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+/**
+ * Cancel Booking
+ * Residents can cancel only their own bookings
+ * Admin can cancel any booking
+ * Cancelled bookings free the slot
+ */
+export const cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { reason } = req.body;
+
+    const booking = await Booking.findById(id).populate("facility");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    // Authorization: Residents can only cancel own bookings
     if (userRole === "RESIDENT" && booking.bookedBy.toString() !== userId) {
       return res.status(403).json({
         success: false,
@@ -327,10 +725,31 @@ export const cancelBooking = async (req, res) => {
       });
     }
 
+    // Cancel booking
     booking.status = "CANCELLED";
+    booking.cancelledAt = new Date();
+    if (reason) booking.cancellationReason = reason;
+
+    // Handle refund for PAID bookings
+    if (booking.amount > 0 && booking.paymentStatus === "PAID") {
+      booking.paymentStatus = "REFUNDED";
+      booking.paymentDetails.refundedAt = new Date();
+      booking.paymentDetails.refundAmount = booking.amount;
+
+      // Deduct from facility revenue
+      const facility = await Facility.findById(booking.facility);
+      if (facility) {
+        facility.totalRevenue = Math.max(0, facility.totalRevenue - booking.amount);
+        await facility.save();
+      }
+    }
+
     await booking.save();
 
-    res.json({
+    await booking.populate("facility", "name");
+    await booking.populate("bookedBy", "name email");
+
+    res.status(200).json({
       success: true,
       message: "Booking cancelled successfully",
       data: booking
@@ -343,28 +762,71 @@ export const cancelBooking = async (req, res) => {
   }
 };
 
-// Get All Bookings (Admin) / My Bookings (Resident)
-export const getBookings = async (req, res) => {
+/**
+ * Complete Booking (Admin marks as completed after booking time passes)
+ */
+export const completeBooking = async (req, res) => {
   try {
-    let bookings;
+    const { id } = req.params;
 
-    if (req.user.role === "ADMIN") {
-      bookings = await Booking.find()
-        .populate("facility")
-        .populate("flat")
-        .populate("bookedBy", "name email")
-        .sort({ createdAt: -1 });
-    } else {
-      // Resident - get own bookings
-      bookings = await Booking.find({
-        bookedBy: req.user.id
-      })
-        .populate("facility")
-        .populate("flat")
-        .sort({ date: 1 });
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
     }
 
-    res.json({
+    if (booking.status === "COMPLETED") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking is already completed"
+      });
+    }
+
+    booking.status = "COMPLETED";
+    await booking.save();
+
+    await booking.populate("facility", "name");
+    await booking.populate("bookedBy", "name email");
+
+    res.status(200).json({
+      success: true,
+      message: "Booking marked as completed",
+      data: booking
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// ==================== BOOKING QUERIES ====================
+
+/**
+ * Get All Bookings
+ * Admin: All bookings
+ * Resident: Own bookings only
+ */
+export const getBookings = async (req, res) => {
+  try {
+    let query = {};
+
+    // Residents see only their own bookings
+    if (req.user.role === "RESIDENT") {
+      query.bookedBy = req.user.id;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("facility", "name location bookingType price")
+      .populate("flat", "flatNumber block")
+      .populate("bookedBy", "name email phone")
+      .sort({ date: -1, timeSlot: 1 });
+
+    res.status(200).json({
       success: true,
       count: bookings.length,
       data: bookings
@@ -377,22 +839,30 @@ export const getBookings = async (req, res) => {
   }
 };
 
-// Get My Upcoming Bookings (Resident)
+/**
+ * Get Upcoming Bookings (Resident/Admin)
+ */
 export const getUpcomingBookings = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const bookings = await Booking.find({
-      bookedBy: req.user.id,
+    let query = {
       date: { $gte: today },
       status: "CONFIRMED"
-    })
-      .populate("facility")
-      .populate("flat")
-      .sort({ date: 1 });
+    };
 
-    res.json({
+    if (req.user.role === "RESIDENT") {
+      query.bookedBy = req.user.id;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("facility", "name location bookingType price")
+      .populate("flat", "flatNumber block")
+      .populate("bookedBy", "name email")
+      .sort({ date: 1, timeSlot: 1 });
+
+    res.status(200).json({
       success: true,
       count: bookings.length,
       data: bookings
@@ -405,21 +875,29 @@ export const getUpcomingBookings = async (req, res) => {
   }
 };
 
-// Get My Past Bookings (Resident)
+/**
+ * Get Past Bookings (Resident/Admin)
+ */
 export const getPastBookings = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const bookings = await Booking.find({
-      bookedBy: req.user.id,
+    let query = {
       date: { $lt: today }
-    })
-      .populate("facility")
-      .populate("flat")
+    };
+
+    if (req.user.role === "RESIDENT") {
+      query.bookedBy = req.user.id;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("facility", "name location bookingType price")
+      .populate("flat", "flatNumber block")
+      .populate("bookedBy", "name email")
       .sort({ date: -1 });
 
-    res.json({
+    res.status(200).json({
       success: true,
       count: bookings.length,
       data: bookings
@@ -432,18 +910,26 @@ export const getPastBookings = async (req, res) => {
   }
 };
 
-// Get Cancelled Bookings (Resident)
+/**
+ * Get Cancelled Bookings (Resident/Admin)
+ */
 export const getCancelledBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({
-      bookedBy: req.user.id,
+    let query = {
       status: "CANCELLED"
-    })
-      .populate("facility")
-      .populate("flat")
-      .sort({ updatedAt: -1 });
+    };
 
-    res.json({
+    if (req.user.role === "RESIDENT") {
+      query.bookedBy = req.user.id;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("facility", "name location bookingType price")
+      .populate("flat", "flatNumber block")
+      .populate("bookedBy", "name email")
+      .sort({ cancelledAt: -1 });
+
+    res.status(200).json({
       success: true,
       count: bookings.length,
       data: bookings
@@ -456,7 +942,11 @@ export const getCancelledBookings = async (req, res) => {
   }
 };
 
-// Check Slot Availability
+// ==================== AVAILABILITY CHECKING ====================
+
+/**
+ * Check Slot Availability for a Facility on a Given Date
+ */
 export const checkSlotAvailability = async (req, res) => {
   try {
     const { facilityId, date } = req.query;
@@ -484,75 +974,52 @@ export const checkSlotAvailability = async (req, res) => {
       });
     }
 
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
-
     // Check if date is in past
+    const checkDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    checkDate.setHours(0, 0, 0, 0);
 
-    if (startDate < today) {
+    if (checkDate < today) {
       return res.status(400).json({
         success: false,
         message: "Cannot check availability for past dates"
       });
     }
 
-    const bookedSlots = await Booking.find({
-      facility: facilityId,
-      date: {
-        $gte: startDate,
-        $lte: endDate
-      },
-      status: "CONFIRMED"
-    }).select("timeSlot");
+    // Get slot availability
+    const slotAvailability = await Promise.all(
+      facility.slots.map(async (slot) => {
+        const bookedCount = await Booking.countDocuments({
+          facility: facilityId,
+          date: checkDate,
+          slotId: slot._id,
+          status: "CONFIRMED"
+        });
 
-    const bookedTimeSlots = bookedSlots.map(b => b.timeSlot);
+        return {
+          slotId: slot._id,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          capacity: slot.capacity,
+          booked: bookedCount,
+          available: Math.max(0, slot.capacity - bookedCount),
+          isAvailable: bookedCount < slot.capacity,
+          isActive: slot.isActive
+        };
+      })
+    );
 
-    const timeSlots = [
-      "09:00-10:00",
-      "10:00-11:00",
-      "11:00-12:00",
-      "12:00-13:00",
-      "14:00-15:00",
-      "15:00-16:00",
-      "16:00-17:00",
-      "17:00-18:00",
-      "18:00-19:00",
-      "19:00-20:00",
-      "20:00-21:00"
-    ];
-
-    const availability = timeSlots.map(slot => {
-      const bookingCount = bookedSlots.filter(b => b.timeSlot === slot).length;
-      return {
-        timeSlot: slot,
-        available: bookingCount < facility.capacity,
-        booked: bookingCount,
-        capacity: facility.capacity
-      };
-    });
-
-    const totalBooked = bookedSlots.length;
-    const isFullyBooked = availability.every(slot => !slot.available);
-
-    res.json({
+    res.status(200).json({
       success: true,
-      data: {
-        facility: {
-          id: facility._id,
-          name: facility.name,
-          capacity: facility.capacity,
-          isActive: facility.isActive
-        },
-        availability,
-        isFullyBooked,
-        totalBooked,
-        maxSlots: facility.capacity * timeSlots.length
-      }
+      date: checkDate,
+      facility: {
+        id: facility._id,
+        name: facility.name,
+        bookingType: facility.bookingType,
+        price: facility.price
+      },
+      data: slotAvailability
     });
   } catch (err) {
     res.status(500).json({
@@ -562,27 +1029,65 @@ export const checkSlotAvailability = async (req, res) => {
   }
 };
 
-// Get Booking Statistics (Admin)
-export const getBookingStats = async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+// ==================== ANALYTICS ====================
 
+/**
+ * Get Facility Analytics Dashboard Data (Admin Only)
+ */
+export const getAnalytics = async (req, res) => {
+  try {
     const totalFacilities = await Facility.countDocuments();
     const activeFacilities = await Facility.countDocuments({ isActive: true });
+
     const totalBookings = await Booking.countDocuments();
     const confirmedBookings = await Booking.countDocuments({ status: "CONFIRMED" });
     const cancelledBookings = await Booking.countDocuments({ status: "CANCELLED" });
     const completedBookings = await Booking.countDocuments({ status: "COMPLETED" });
-    const todayBookings = await Booking.countDocuments({
-      date: {
-        $gte: today,
-        $lte: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+
+    const freeBookings = await Booking.countDocuments({
+      status: { $in: ["CONFIRMED", "COMPLETED"] }
+    }).populate("facility");
+
+    const paidBookings = await Booking.find({
+      status: { $in: ["CONFIRMED", "COMPLETED"] }
+    }).populate("facility");
+
+    let paidCount = 0;
+    let totalRevenue = 0;
+
+    paidBookings.forEach((booking) => {
+      if (booking.facility.bookingType === "PAID" && booking.paymentStatus === "PAID") {
+        paidCount++;
+        totalRevenue += booking.amount;
+      }
+    });
+
+    // Calculate total and occupied slots
+    const allSlots = await Facility.aggregate([
+      {
+        $unwind: "$slots"
       },
+      {
+        $group: {
+          _id: null,
+          totalSlots: { $sum: "$slots.capacity" },
+          activeSlots: { $sum: { $cond: ["$slots.isActive", "$slots.capacity", 0] } }
+        }
+      }
+    ]);
+
+    const slotStats = allSlots.length > 0 ? allSlots[0] : { totalSlots: 0, activeSlots: 0 };
+
+    // Calculate occupied slots for today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayBookings = await Booking.countDocuments({
+      date: today,
       status: "CONFIRMED"
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         facilities: {
@@ -596,6 +1101,19 @@ export const getBookingStats = async (req, res) => {
           cancelled: cancelledBookings,
           completed: completedBookings,
           today: todayBookings
+        },
+        revenue: {
+          total: totalRevenue,
+          currency: "INR"
+        },
+        slots: {
+          total: slotStats.totalSlots || 0,
+          active: slotStats.activeSlots || 0,
+          occupiedToday: todayBookings
+        },
+        bookingTypes: {
+          free: freeBookings,
+          paid: paidCount
         }
       }
     });
@@ -606,3 +1124,96 @@ export const getBookingStats = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get Facility-wise Analytics (Admin Only)
+ */
+export const getFacilityAnalytics = async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+
+    const facility = await Facility.findById(facilityId);
+
+    if (!facility) {
+      return res.status(404).json({
+        success: false,
+        message: "Facility not found"
+      });
+    }
+
+    const totalBookings = await Booking.countDocuments({ facility: facilityId });
+    const confirmedBookings = await Booking.countDocuments({
+      facility: facilityId,
+      status: "CONFIRMED"
+    });
+    const cancelledBookings = await Booking.countDocuments({
+      facility: facilityId,
+      status: "CANCELLED"
+    });
+
+    const stats = await getSlotStats(facilityId);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        facility: {
+          id: facility._id,
+          name: facility.name,
+          type: facility.facilityType,
+          bookingType: facility.bookingType,
+          price: facility.price
+        },
+        bookings: {
+          total: totalBookings,
+          confirmed: confirmedBookings,
+          cancelled: cancelledBookings
+        },
+        slots: stats,
+        revenue: {
+          total: facility.totalRevenue,
+          currency: "INR"
+        }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Calculate slot statistics for a facility
+ */
+async function getSlotStats(facilityId) {
+  const facility = await Facility.findById(facilityId);
+
+  if (!facility) {
+    return { totalSlots: 0, bookedSlots: 0, availableSlots: 0 };
+  }
+
+  let totalSlots = 0;
+  let bookedSlots = 0;
+
+  // Count total slot capacity
+  for (const slot of facility.slots) {
+    if (slot.isActive) {
+      totalSlots += slot.capacity;
+    }
+  }
+
+  // Count all active bookings
+  bookedSlots = await Booking.countDocuments({
+    facility: facilityId,
+    status: "CONFIRMED"
+  });
+
+  return {
+    totalSlots,
+    bookedSlots,
+    availableSlots: Math.max(0, totalSlots - bookedSlots)
+  };
+}

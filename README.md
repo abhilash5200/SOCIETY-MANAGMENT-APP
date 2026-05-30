@@ -276,6 +276,143 @@ Role: STAFF
 
 ---
 
+# 🏢 Facility Booking Module
+
+The Society Management System Pro includes a complete Facility Booking Management system that allows administrators to create and manage society facilities while enabling residents to reserve available facilities.
+
+## 👨‍💼 Admin Facility Management
+
+Admins can:
+
+* Create new facilities
+* Set facility type (FREE or PAID)
+* Define facility pricing
+* Configure custom time slots
+* Set slot capacities
+* Activate or deactivate facilities
+* View all facility bookings
+* Track facility revenue
+* Monitor facility usage statistics
+* View resident booking history
+
+### Facility Types
+
+#### FREE Facilities
+
+Examples:
+
+* Library
+* Reading Room
+* Community Hall (Free Access)
+* Indoor Games Room
+
+Rules:
+
+* Residents can maintain only one active booking at a time for the same free facility.
+* Duplicate bookings are prevented.
+* Slot availability is automatically validated.
+
+#### PAID Facilities
+
+Examples:
+
+* Party Hall
+* Guest Room
+* Club House
+* Premium Sports Court
+
+Features:
+
+* Multiple bookings allowed.
+* Payment tracking supported.
+* Revenue analytics maintained.
+* Booking history recorded.
+
+---
+
+## 🏠 Resident Facility Booking
+
+Residents can:
+
+* Browse available facilities
+* View facility details
+* Check facility location
+* View facility type (FREE / PAID)
+* View pricing information
+* Select available dates
+* Choose available time slots
+* Book facilities
+* Pay for premium facilities
+* View booking history
+* Cancel bookings
+
+---
+
+## ⏰ Slot-Based Booking System
+
+Each facility supports custom administrator-defined slots.
+
+Example:
+
+09:00 AM – 10:00 AM
+
+10:00 AM – 11:00 AM
+
+11:00 AM – 12:00 PM
+
+Features:
+
+* Capacity management per slot
+* Duplicate booking prevention
+* Availability validation
+* Real-time slot tracking
+
+---
+
+## 💳 Payment Management
+
+Supported Payment Methods:
+
+* UPI
+* Card
+* Cash
+* Bank Transfer
+* Digital Wallet
+
+Payment Tracking:
+
+* Pending
+* Paid
+* Failed
+* Refunded
+
+---
+
+## 📊 Facility Analytics
+
+Administrators can monitor:
+
+* Total bookings
+* Active bookings
+* Cancelled bookings
+* Facility revenue
+* Facility utilization
+* Resident booking statistics
+
+---
+
+## 🔐 Booking Rules
+
+* Residents cannot book unavailable slots.
+* Duplicate bookings are prevented.
+* Free facilities restrict active duplicate bookings.
+* Paid facilities support multiple bookings.
+* Slot capacity limits are enforced.
+* Only authenticated users can create bookings.
+* Admins can view all bookings.
+* Residents can only manage their own bookings.
+
+
 # 📦 Main Functional Modules
 
 | Module         | Description                |
